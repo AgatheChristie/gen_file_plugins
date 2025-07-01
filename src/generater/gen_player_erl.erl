@@ -9,7 +9,7 @@
 -module(gen_player_erl).
 
 
--export([start/0]).
+-export([start/0, tail/0, header/0, gen_cache_function/2, gen_fields_function/2, gen_player_function/2, parse_player_fields/0]).
 start() -> ok.
 %%% start() ->
 %%%    Fields = parse_player_fields(),

@@ -1,0 +1,14 @@
+{application, gen_file,
+ [{description, "true"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications,
+   [kernel,
+    stdlib
+   ]},
+  {env,[]},
+  {modules, [gen_file, gen_file_prv]},
+
+  {licenses, ["Apache 2.0"]},
+  {links, []}
+ ]}.

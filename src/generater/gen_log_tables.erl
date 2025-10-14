@@ -33,7 +33,7 @@ start() -> ok.
   %%  (MTime1 == 0 orelse MTime1 > CompileTime) andalso gen_log_tables(),
   %%  MTime2 = gen_file:get_modify_time(?GAME_TABLES),
   %%  (gen_assets_file:is_assets_data_changed() orelse MTime2 == 0 orelse MTime2 > CompileTime) andalso parse_game_tables(),
-    ok.
+  %%  ok.
 
 gen_log_tables() ->
     compile_and_load_beam(?LOG_TABLES, log_tables),

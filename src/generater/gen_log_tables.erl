@@ -26,13 +26,13 @@
     {i, "_build/default/plugins/game/include/"},
     {i, "_build/default/plugins/gen_file/include/"}]).
 
-start() ->
-    CompileTime = gen_file:get_compile_time(),
-    true = code:add_path(?COMPILE_PATH),
-    MTime1 = gen_file:get_modify_time(?LOG_TABLES),
-    (MTime1 == 0 orelse MTime1 > CompileTime) andalso gen_log_tables(),
-    MTime2 = gen_file:get_modify_time(?GAME_TABLES),
-    (gen_assets_file:is_assets_data_changed() orelse MTime2 == 0 orelse MTime2 > CompileTime) andalso parse_game_tables(),
+start() -> ok.
+  %%  CompileTime = gen_file:get_compile_time(),
+  %%  true = code:add_path(?COMPILE_PATH),
+  %%  MTime1 = gen_file:get_modify_time(?LOG_TABLES),
+  %%  (MTime1 == 0 orelse MTime1 > CompileTime) andalso gen_log_tables(),
+  %%  MTime2 = gen_file:get_modify_time(?GAME_TABLES),
+  %%  (gen_assets_file:is_assets_data_changed() orelse MTime2 == 0 orelse MTime2 > CompileTime) andalso parse_game_tables(),
     ok.
 
 gen_log_tables() ->

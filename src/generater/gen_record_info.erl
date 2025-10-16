@@ -1,13 +1,13 @@
 %%%-------------------------------------------------------------------
-%%% @author taiqi
-%%% @copyright (C) 2025, xhm
+%%% @author Jeson
+%%% @copyright (C) 2023, hk
 %%% @doc
 %%%
 %%% @end
-%%% Created : 19. 7月 2025 13:28
+%%% Created : 19. 10月 2023 14:28
 %%%-------------------------------------------------------------------
 -module(gen_record_info).
-
+-author("Jeson").
 
 -export([start/0, parse_record/1]).
 
@@ -19,9 +19,7 @@ start() ->
             {ok, FileBin} = file:read_file(Dir ++ FileName),
             case re:run(FileBin, <<"-record\\(.*?\\)\\.">>, [global, dotall, {capture, all, binary}]) of
                 {match, L} ->
-                    RecordList0 = [parse_record(RecordBin) || [RecordBin] <- L],
-                    RecordList = [Record || {N, _} = Record <- RecordList0, re:run(N, <<"_request|_reply|_notify">>) == nomatch],
-
+                    RecordList = [parse_record(RecordBin) || [RecordBin] <- L],
                     XH1 = <<XH/binary, "-include(\"", (list_to_binary(FileName))/binary, "\").\n">>,
                     {XH1, gen_fields(RecordList, XF), gen_default(RecordList, XD)};
                 nomatch ->

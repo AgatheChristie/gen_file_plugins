@@ -1,13 +1,13 @@
 %%%-------------------------------------------------------------------
-%%% @author taiqi
-%%% @copyright (C) 2025, xhm
+%%% @author Jeson
+%%% @copyright (C) 2023, hk
 %%% @doc
 %%%
 %%% @end
-%%% Created : 19. 7月 2025 13:28
+%%% Created : 21. 11月 2023 11:12
 %%%-------------------------------------------------------------------
 -module(gen_log_tables).
-
+-author("Jeson").
 
 -include("common.hrl").
 
@@ -26,28 +26,28 @@
     {i, "_build/default/plugins/game/include/"},
     {i, "_build/default/plugins/gen_file/include/"}]).
 
-start() -> ok.
+start() ->
   %%  CompileTime = gen_file:get_compile_time(),
   %%  true = code:add_path(?COMPILE_PATH),
   %%  MTime1 = gen_file:get_modify_time(?LOG_TABLES),
   %%  (MTime1 == 0 orelse MTime1 > CompileTime) andalso gen_log_tables(),
   %%  MTime2 = gen_file:get_modify_time(?GAME_TABLES),
   %%  (gen_assets_file:is_assets_data_changed() orelse MTime2 == 0 orelse MTime2 > CompileTime) andalso parse_game_tables(),
-  %%  ok.
+    ok.
 
 gen_log_tables() ->
     compile_and_load_beam(?LOG_TABLES, log_tables),
 
     TabList = log_tables:get(gen_assets_file:all_assets_and_name()),
     #{sql := SqlBin, rec := RecList} = parse_db_tables(TabList, #{sql => <<>>, rec => []}),
-    [write_header(Tab, game_log, Re, RecBin) || {Tab, _Header, Re, RecBin} <- RecList],
+    HeaderFile = ?INCLUDE_DIR ++ "game_log.hrl",
+    ok = file:write_file(HeaderFile, binary:list_to_bin([element(4, X) || X <- RecList])),
     not filelib:is_dir(?SQL_DIR) andalso file:make_dir(?SQL_DIR),
     ok = file:write_file(?SQL_DIR ++ "game_log.sql", SqlBin),
 
     FileBin = gen_game_log_lib(TabList, header()),
     ok = file:write_file(?TABLES_DIR ++ "game_log_lib.erl", FileBin).
 
--define(HEAD_LIST,                  [player_id, server_id, p_channel, p_account, p_name, p_level]).
 gen_game_log_lib([], Bin) ->
     Bin;
 gen_game_log_lib([#db_table{} = Tab | Rest], Bin) ->
@@ -56,53 +56,67 @@ gen_game_log_lib([#db_table{} = Tab | Rest], Bin) ->
 
 gen_log_fun(#db_table{name = TabName, fields = Fields, comment = Comment}) ->
     TabNameBin = atom_to_binary(TabName),
-    {FieldBin1, FieldBin2} = gen_log_field(Fields, <<>>, <<>>, <<>>),
+    {FieldBin1, FieldBin2} = gen_log_field(Fields, <<>>, <<>>, <<>>, 0),
     <<"%% @doc ", Comment/binary, "\n", TabNameBin/binary,
         FieldBin1/binary, "    Record = #", TabNameBin/binary,
         "{\n", FieldBin2/binary, "    },\n    write_log(", TabNameBin/binary, ", Record).\n\n">>.
 
 -define(S8,                                     <<"        ">>).
-gen_log_field([], Bin1, Bin2, Bin3) ->
+gen_log_field([], Bin1, Bin2, Bin3, _) ->
     Bin4 = binary:part(Bin1, 2, size(Bin1) - 2),
     Bin6 = binary:replace(Bin3, <<", ">>, <<>>),
     {<<"(", Bin4/binary, ") -> \n", Bin2/binary>>, Bin6};
-gen_log_field([#db_field{increment = true} | Rest], Bin1, Bin2, Bin3) ->
-    gen_log_field(Rest, Bin1, Bin2, Bin3);
-gen_log_field([#db_field{name = time} | Rest], Bin1, Bin2, Bin3) ->
+gen_log_field([#db_field{increment = true} | Rest], Bin1, Bin2, Bin3, HC) ->
+    gen_log_field(Rest, Bin1, Bin2, Bin3, HC);
+gen_log_field([#db_field{name = time} | Rest], Bin1, Bin2, Bin3, HC) ->
     Bin6 = <<Bin3/binary, (?S8)/binary, ", time = date_utils:unixtime()\n">>,
-    gen_log_field(Rest, Bin1, Bin2, Bin6);
-gen_log_field([#db_field{name = source} | Rest], Bin1, Bin2, Bin3) ->
+    gen_log_field(Rest, Bin1, Bin2, Bin6, HC);
+gen_log_field([#db_field{name = source}, #db_field{name = source_param} | Rest], Bin1, Bin2, Bin3, HC) ->
     Bin4 = <<Bin1/binary, ", Source">>,
-    Bin6 = <<Bin3/binary, (?S8)/binary, ", source = source_data:get(Source)\n">>,
-    gen_log_field(Rest, Bin4, Bin2, Bin6);
+    Bin5 = <<Bin2/binary, "    {Source1, SourceParam} = source(Source),\n">>,
+    Bin6 = <<Bin3/binary,
+        (?S8)/binary, ", source = Source1\n",
+        (?S8)/binary, ", source_param = SourceParam\n">>,
+    gen_log_field(Rest, Bin4, Bin5, Bin6, HC);
 gen_log_field([
-    #db_field{name = player_id}, #db_field{name = server_id},
-    #db_field{name = p_channel}, #db_field{name = p_account},
-    #db_field{name = p_name}, #db_field{name = p_level} | Rest], Bin1, Bin2, Bin3) ->
+    #db_field{name = player_id}, #db_field{name = p_account},
+    #db_field{name = p_level}, #db_field{name = p_name}  | Rest], Bin1, Bin2, Bin3, 0) ->
     Bin4 = <<Bin1/binary, ", PlayerHead">>,
-    Bin5 = <<Bin2/binary, "    #{player_id := PlayerId, svr_id := ServerId, sChannel := PChannel,\n",
-    "             account := PAccount, name := PName, level := PLevel} = PlayerHead,\n">>,
+    Bin5 = <<Bin2/binary, "    #{player_id := PlayerId, account := PAccount, name := PName, level := PLevel} = head(PlayerHead),\n">>,
     Bin6 = <<Bin3/binary,
         (?S8)/binary, ", player_id = PlayerId\n",
-        (?S8)/binary, ", server_id = ServerId\n",
-        (?S8)/binary, ", p_channel = PChannel\n",
         (?S8)/binary, ", p_account = PAccount\n",
-        (?S8)/binary, ", p_name = PName\n",
-        (?S8)/binary, ", p_level = PLevel\n">>,
-    gen_log_field(Rest, Bin4, Bin5, Bin6);
-gen_log_field([#db_field{name = Field, type = term} | Rest], Bin1, Bin2, Bin3) ->
+        (?S8)/binary, ", p_level = PLevel\n",
+        (?S8)/binary, ", p_name = PName\n" >>,
+    gen_log_field(Rest, Bin4, Bin5, Bin6, 1);
+gen_log_field([
+    #db_field{name = player_id}, #db_field{name = p_account},
+    #db_field{name = p_level}, #db_field{name = p_name}  | Rest], Bin1, Bin2, Bin3, HC) ->
+    HCBin = integer_to_binary(HC),
+    Bin4 = <<Bin1/binary, ", PlayerHead", HCBin/binary>>,
+    Bin5 = <<Bin2/binary, "    #{player_id := PlayerId", HCBin/binary,
+        ", account := PAccount", HCBin/binary,
+        ", name := PName", HCBin/binary, ", level := PLevel", HCBin/binary,"} = head(PlayerHead", HCBin/binary, "),\n">>,
+    Bin6 = <<Bin3/binary,
+        (?S8)/binary, ", player_id", HCBin/binary, " = PlayerId", HCBin/binary, "\n",
+        (?S8)/binary, ", p_account", HCBin/binary, " = PAccount", HCBin/binary, "\n",
+        (?S8)/binary, ", p_level", HCBin/binary, " = PLevel", HCBin/binary, "\n",
+        (?S8)/binary, ", p_name", HCBin/binary, " = PName", HCBin/binary, "\n">>,
+    gen_log_field(Rest, Bin4, Bin5, Bin6, HC + 1);
+gen_log_field([#db_field{name = Field, type = Type} | Rest], Bin1, Bin2, Bin3, HC)
+    when Type == term; Type == text; Type == varchar ->
     FieldBin = atom_to_binary(Field),
     CamelField = camel_case(FieldBin),
     Bin4 = <<Bin1/binary, ", ", CamelField/binary>>,
     Bin6 = <<Bin3/binary, (?S8)/binary, ", ", FieldBin/binary,
-        " = common_utils:term_to_binary(", CamelField/binary, ")\n">>,
-    gen_log_field(Rest, Bin4, Bin2, Bin6);
-gen_log_field([#db_field{name = Field} | Rest], Bin1, Bin2, Bin3) ->
+        " = to_binary(", CamelField/binary, ")\n">>,
+    gen_log_field(Rest, Bin4, Bin2, Bin6, HC);
+gen_log_field([#db_field{name = Field} | Rest], Bin1, Bin2, Bin3, HC) ->
     FieldBin = atom_to_binary(Field),
     CamelField = camel_case(FieldBin),
     Bin4 = <<Bin1/binary, ", ", CamelField/binary>>,
     Bin6 = <<Bin3/binary, (?S8)/binary, ", ", FieldBin/binary, " = ", CamelField/binary, "\n">>,
-    gen_log_field(Rest, Bin4, Bin2, Bin6).
+    gen_log_field(Rest, Bin4, Bin2, Bin6, HC).
 
 parse_game_tables() ->
     compile_and_load_beam(?GAME_TABLES, game_tables),
@@ -121,7 +135,14 @@ write_header(Tab, undefined, Re, RecBin) ->
     write_header(Tab, Tab, Re, RecBin);
 write_header(_Tab, Header, Re, RecBin) ->
     HeaderFile = ?INCLUDE_DIR ++ atom_to_list(Header) ++ ".hrl",
-    {ok, FileBin} = file:read_file(HeaderFile),
+    {ok, FileBin} =
+        case filelib:is_file(HeaderFile) of
+            true ->
+                file:read_file(HeaderFile);
+            false ->
+                {ok, <<>>}
+        end,
+
     Bin1 = re:replace(FileBin, Re, <<>>, [dotall, {return, binary}]),
     ok = file:write_file(HeaderFile, <<Bin1/binary, RecBin/binary>>).
 
@@ -139,30 +160,33 @@ gen_rec(#db_table{name = Name, header = Header, fields = Fields}, List) ->
     RecDefine = <<"REC_", (list_to_binary(Upper))/binary>>,
     RecBin = <<CommentBin/binary, "-record(", (atom_to_binary(Name))/binary, ", {\n">>,
     Head = <<"\n\n-ifndef(", RecDefine/binary, ").\n-define(", RecDefine/binary, ", 1).\n">>,
-    RecordBin = <<Head/binary, (gen_filed_bin(Fields, RecBin))/binary, "}).\n-endif.">>,
-    [{Name, Header, <<"\n\n-ifndef\\(", RecDefine/binary, "\\).*?endif\\.">>, RecordBin} | List].
+    RecordBin = <<Head/binary, (gen_filed_bin(Fields, RecBin, 0))/binary, "}).\n-endif.\n">>,
+    [{Name, Header, <<"\n\n-ifndef\\(", RecDefine/binary, "\\).*?endif\\.\n">>, RecordBin} | List].
 
 -define(MAX_RECORD_STR_LEN,                                 42).
-gen_filed_bin([], Bin) ->
+gen_filed_bin([], Bin, _) ->
     {match, [_, S1, S2]} = re:run(Bin, "(.*),(\s+%\s.*?\n)", [dotall, {capture, all, binary}]),
     <<S1/binary, " ", S2/binary>>;
-gen_filed_bin([#db_field{increment = true} | Rest], Bin) ->
-    gen_filed_bin(Rest, Bin);
-gen_filed_bin([#db_field{type = Type, name = Name, default = Default, comment = Comment} | Rest], Bin) ->
+gen_filed_bin([#db_field{increment = true} | Rest], Bin, HC) ->
+    gen_filed_bin(Rest, Bin, HC);
+gen_filed_bin([#db_field{type = Type, name = Name, default = Default, comment = Comment} | Rest], Bin, HC) ->
     CommentBin = parse_comment(Comment, Name),
     CommentBin1 = binary:part(CommentBin, 8, size(CommentBin) - 8),
     DefaultBin = parse_field_default(Type, Default),
-    FieldBin = <<"    ", (atom_to_binary(Name))/binary, " = ", DefaultBin/binary, ",">>,
+    {HC1, CntBin} = get_count_bin(Name, HC),
+    FieldNameBin = <<(atom_to_binary(Name))/binary, CntBin/binary>>,
+
+    FieldBin = <<"    ", FieldNameBin/binary, " = ", DefaultBin/binary, ",">>,
     SpaceLen = max(1, ?MAX_RECORD_STR_LEN - size(FieldBin)),
     SpaceBin = binary:list_to_bin(lists:duplicate(SpaceLen, <<" ">>)),
-    gen_filed_bin(Rest, <<Bin/binary, FieldBin/binary, SpaceBin/binary, "%", CommentBin1/binary, "\n">>).
+    gen_filed_bin(Rest, <<Bin/binary, FieldBin/binary, SpaceBin/binary, "%", CommentBin1/binary, "\n">>, HC1).
 
 parse_field_default(Int, Default) when Int == bigint orelse Int == int orelse Int == tinyint ->
     integer_to_binary(?IF(is_integer(Default), Default, 0));
 parse_field_default(term, Default) ->
     to_binary(Default);
-parse_field_default(Str, _) when Str == varchar orelse Str == text ->
-    <<"<<>>">>;
+parse_field_default(Str, Default) when Str == varchar orelse Str == text ->
+    to_binary(?DEFAULT(Default, <<>>));
 parse_field_default(blob, _) ->
     <<"blob">>;
 parse_field_default(decimal, _) ->
@@ -173,7 +197,7 @@ create_sql(#db_table{gen_sql = false}) ->
 create_sql(#db_table{name = TabName, fields = Fields, index_list = IndexList, comment = Comment}) ->
     CommentBin = parse_comment(Comment, TabName),
     TabNameBin = atom_to_binary(TabName),
-    FieldsBin = gen_field_sql(Fields, <<>>),
+    FieldsBin = gen_field_sql(Fields, <<>>, 0),
     IndexBin = gen_index_sql(IndexList, [N || #db_field{name = N} <- Fields], <<>>),
     NewIndexBin = binary:part(IndexBin, 0, size(IndexBin) - 2),
     <<"CREATE TABLE IF NOT EXISTS `", TabNameBin/binary, "` (\n",
@@ -203,20 +227,31 @@ parse_index_data(#db_index{name = Name, fields = Fields} = Index) ->
     NewNameBin = ?IF(NameBin == <<>>, <<>>, <<" ", NameBin/binary>>),
     Index#db_index{name = NewNameBin, fields = FieldsBin}.
 
-gen_field_sql([], Bin) ->
+gen_field_sql([], Bin, _HC) ->
     Bin;
-gen_field_sql([#db_field{ignore = true} | Rest], Bin) ->
-    gen_field_sql(Rest, Bin);
-gen_field_sql([#db_field{name = Name} = Field | Rest], Bin) ->
+gen_field_sql([#db_field{ignore = true} | Rest], Bin, HC) ->
+    gen_field_sql(Rest, Bin, HC);
+gen_field_sql([#db_field{name = Name} = Field | Rest], Bin, HC) ->
     #db_field{type = Type, default = Default, increment = Increment,
         comment = Comment, unsigned = Unsigned} = parse_db_field(Field),
-    gen_field_sql(Rest, <<Bin/binary, "    ", (parse_field(Name))/binary, " ",
-        Type/binary, Unsigned/binary, Default/binary, Increment/binary, Comment/binary, ",\n">>).
+    {HC1, HCBin} = get_count_bin(Name, HC),
+    FieldName = <<(atom_to_binary(Name))/binary, HCBin/binary>>,
+    gen_field_sql(Rest, <<Bin/binary, "    ", (parse_field(FieldName))/binary, " ",
+        Type/binary, Unsigned/binary, Default/binary, Increment/binary, Comment/binary, ",\n">>, HC1).
+
+get_count_bin(p_name, 0) ->
+    {1, <<>>};
+get_count_bin(p_name, Cnt) ->
+    {Cnt + 1, <<(integer_to_binary(Cnt))/binary>>};
+get_count_bin(Name, Cnt) when (Name == p_account orelse Name == player_id orelse Name == p_level) andalso Cnt > 0 ->
+    {Cnt, <<(integer_to_binary(Cnt))/binary>>};
+get_count_bin(_, Cnt) ->
+    {Cnt, <<>>}.
 
 -define(DEFAULT_VARCAHR_LEN,                        64).
 %% @doc 解析 #db_field 字段 这里会把 type default 转成对应 binary
 parse_db_field(#db_field{type = term, len = Len} = Field) ->
-    parse_db_field(Field#db_field{type = ?IF(Len == ?UNDEF, text, varchar)});
+    parse_db_field(Field#db_field{type = varchar, len = ?DEFAULT(Len, 255)});
 parse_db_field(#db_field{type = int, default = Default, increment = Inc} = Field)
     when is_integer(Default) orelse Default == undefined ->
     DefaultBin = ?IF(Inc, undefined, integer_to_binary(?DEFAULT(Default, 0))),
@@ -232,7 +267,7 @@ parse_db_field(#db_field{type = bigint, default = Default, increment = Inc} = Fi
 parse_db_field(#db_field{type = datetime = Type} = Field) ->
     parse_desc_data(Field#db_field{type = atom_to_binary(Type), default = undefined, unsigned = false, increment = false});
 parse_db_field(#db_field{type = text = Type} = Field) ->
-    parse_desc_data(Field#db_field{type = atom_to_binary(Type), default = undefined, unsigned = false, increment = false});
+    parse_desc_data(Field#db_field{type = atom_to_binary(Type), unsigned = false, increment = false});
 parse_db_field(#db_field{type = varchar = Type, len = Len, default = Default} = Field)
     when (is_integer(Len) andalso Len > 0) orelse Len == undefined ->
     Len1 = ?IF(is_integer(Len), Len ,?DEFAULT_VARCAHR_LEN),
@@ -246,10 +281,11 @@ parse_db_field(#db_field{type = decimal = Type, len = {M, D}, default = Default}
     parse_desc_data(Field#db_field{type = TypeBin, default = DefaultBin, unsigned = false, increment = false}).
 
 %% @doc 将 #db_field 所有字段转换成对应的 sql_binary
-parse_desc_data(#db_field{name = Name, increment = Increment,
+parse_desc_data(#db_field{
+    name = Name, increment = Increment, type = Type,
     default = Default, comment = Comment, unsigned = Unsigned} = Field) ->
     Field#db_field{
-        default = parse_default(Default), comment = parse_comment(Comment, Name),
+        default = parse_default(Type, Default), comment = parse_comment(Comment, Name),
         unsigned = parse_unsigned(Unsigned), increment = parse_increment(Increment)}.
 
 parse_increment(false) ->
@@ -278,9 +314,12 @@ parse_comment(Comment, _) when is_list(Comment) ->
 parse_comment(Comment, _) when is_binary(Comment) ->
     <<" COMMENT \'", Comment/binary, "\'">>.
 
-parse_default(undefined) ->
+parse_default(Type, _)
+    when Type == <<"text">>; Type == <<"blob">> ->
     <<" NOT NULL">>;
-parse_default(Default) when is_binary(Default) ->
+parse_default(_, undefined) ->
+    <<" NOT NULL">>;
+parse_default(_, Default) when is_binary(Default) ->
     <<" NOT NULL DEFAULT '", Default/binary, "'">>.
 
 to_binary(Term) ->
@@ -304,6 +343,21 @@ header() ->
 
 write_log(Tab, Record) ->
     gen_server:cast(Tab, {log, Record}).
+
+head(Head) when is_map(Head) ->
+    Head;
+head(Player) when element(1, Player) == player ->
+    player_head:log_head(Player).
+
+to_binary(Bin) when is_binary(Bin) ->
+    Bin;
+to_binary(Data) ->
+    common_utils:term_to_binary(Data).
+
+source(Source) when is_integer(Source) ->
+    {Source, <<\"[]\">>};
+source([Source | SourceParam]) ->
+    {Source, to_binary(SourceParam)}.
 
 "/utf8>>.
 

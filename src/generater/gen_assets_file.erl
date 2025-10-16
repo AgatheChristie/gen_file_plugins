@@ -1,13 +1,13 @@
 %%%-------------------------------------------------------------------
-%%% @author taiqi
-%%% @copyright (C) 2025, xhm
+%%% @author
+%%% @copyright (C) 2023, <COMPANY>
 %%% @doc
 %%%
 %%% @end
-%%% Created : 19. 7月 2025 13:28
+%%% Created : 02. 11月 2023 19:44
 %%%-------------------------------------------------------------------
 -module(gen_assets_file).
-
+-author("panhao").
 
 %% API
 -export([start/0, gen_assets_sql/0, all_assets_and_name/0, is_assets_data_changed/0]).

@@ -10,15 +10,15 @@
 
 
 -export([start/0, tail/0, header/0, gen_cache_function/2, gen_fields_function/2, gen_player_function/2, parse_player_fields/0]).
-start() -> ok.
-%%% start() ->
-%%%    Fields = parse_player_fields(),
-%%%    FunBin = gen_player_function(Fields, <<>>),
-%%%    CacheBin = gen_cache_function(Fields, <<>>),
- %%%   FieldsBin = gen_fields_function(Fields, <<>>),
- %%%   FieldsBin1 = <<"all_fields() ->\n    [", FieldsBin/binary, "].\n\n">>,
- %%%   FileBin = <<(header())/binary, FunBin/binary, "\n", CacheBin/binary, FieldsBin1/binary, (tail())/binary>>,
- %%%   ok = file:write_file("apps/game_server/src/player/player.erl", FileBin).
+
+ start() ->
+    Fields = parse_player_fields(),
+    FunBin = gen_player_function(Fields, <<>>),
+    CacheBin = gen_cache_function(Fields, <<>>),
+    FieldsBin = gen_fields_function(Fields, <<>>),
+    FieldsBin1 = <<"all_fields() ->\n    [", FieldsBin/binary, "].\n\n">>,
+    FileBin = <<(header())/binary, FunBin/binary, "\n", CacheBin/binary, FieldsBin1/binary, (tail())/binary>>,
+    ok = file:write_file("apps/game_server/src/player/player.erl", FileBin).
 
 parse_player_fields() ->
     {ok, Bin} = file:read_file("apps/game_server/include/player.hrl"),

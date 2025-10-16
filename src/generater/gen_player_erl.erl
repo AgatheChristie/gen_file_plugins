@@ -13,10 +13,10 @@
 
 -define(PLAYER_HRL, "apps/game_server/include/player.hrl").
 
-start() ->
-    MTime = gen_file:get_modify_time(?PLAYER_HRL),
-    CompileTime = gen_file:get_compile_time(),
-    (MTime == 0 orelse MTime > CompileTime) andalso gen_player_erl().
+start() -> ok.
+  %%  MTime = gen_file:get_modify_time(?PLAYER_HRL),
+  %%  CompileTime = gen_file:get_compile_time(),
+  %%  (MTime == 0 orelse MTime > CompileTime) andalso gen_player_erl().
 
 gen_player_erl() ->
     Fields = parse_player_fields(),

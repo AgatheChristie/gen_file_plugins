@@ -71,6 +71,9 @@ gen_log_field([#db_field{increment = true} | Rest], Bin1, Bin2, Bin3, HC) ->
 gen_log_field([#db_field{name = time} | Rest], Bin1, Bin2, Bin3, HC) ->
     Bin6 = <<Bin3/binary, (?S8)/binary, ", time = date_utils:unixtime()\n">>,
     gen_log_field(Rest, Bin1, Bin2, Bin6, HC);
+gen_log_field([#db_field{name = server_id} | Rest], Bin1, Bin2, Bin3, HC) ->
+    Bin6 = <<Bin3/binary, (?S8)/binary, ", server_id = sys_utils:server_id()\n">>,
+    gen_log_field(Rest, Bin1, Bin2, Bin6, HC);
 gen_log_field([#db_field{name = source}, #db_field{name = source_param} | Rest], Bin1, Bin2, Bin3, HC) ->
     Bin4 = <<Bin1/binary, ", Source">>,
     Bin5 = <<Bin2/binary, "    {Source1, SourceParam} = source(Source),\n">>,
@@ -80,27 +83,29 @@ gen_log_field([#db_field{name = source}, #db_field{name = source_param} | Rest],
     gen_log_field(Rest, Bin4, Bin5, Bin6, HC);
 gen_log_field([
     #db_field{name = player_id}, #db_field{name = p_account},
-    #db_field{name = p_level}, #db_field{name = p_name}  | Rest], Bin1, Bin2, Bin3, 0) ->
+    #db_field{name = p_level}, #db_field{name = p_name}, #db_field{name = p_channel} | Rest], Bin1, Bin2, Bin3, 0) ->
     Bin4 = <<Bin1/binary, ", PlayerHead">>,
-    Bin5 = <<Bin2/binary, "    #{player_id := PlayerId, account := PAccount, name := PName, level := PLevel} = head(PlayerHead),\n">>,
+    Bin5 = <<Bin2/binary, "    #{player_id := PlayerId, account := PAccount, name := PName, sChannel := PChannel, level := PLevel} = head(PlayerHead),\n">>,
     Bin6 = <<Bin3/binary,
         (?S8)/binary, ", player_id = PlayerId\n",
         (?S8)/binary, ", p_account = PAccount\n",
         (?S8)/binary, ", p_level = PLevel\n",
+        (?S8)/binary, ", p_channel = PChannel\n",
         (?S8)/binary, ", p_name = PName\n" >>,
     gen_log_field(Rest, Bin4, Bin5, Bin6, 1);
 gen_log_field([
     #db_field{name = player_id}, #db_field{name = p_account},
-    #db_field{name = p_level}, #db_field{name = p_name}  | Rest], Bin1, Bin2, Bin3, HC) ->
+    #db_field{name = p_level}, #db_field{name = p_name}, #db_field{name = p_channel}  | Rest], Bin1, Bin2, Bin3, HC) ->
     HCBin = integer_to_binary(HC),
     Bin4 = <<Bin1/binary, ", PlayerHead", HCBin/binary>>,
     Bin5 = <<Bin2/binary, "    #{player_id := PlayerId", HCBin/binary,
         ", account := PAccount", HCBin/binary,
-        ", name := PName", HCBin/binary, ", level := PLevel", HCBin/binary,"} = head(PlayerHead", HCBin/binary, "),\n">>,
+        ", name := PName", HCBin/binary, ", sChannel := PChannel", HCBin/binary, ", level := PLevel", HCBin/binary,"} = head(PlayerHead", HCBin/binary, "),\n">>,
     Bin6 = <<Bin3/binary,
         (?S8)/binary, ", player_id", HCBin/binary, " = PlayerId", HCBin/binary, "\n",
         (?S8)/binary, ", p_account", HCBin/binary, " = PAccount", HCBin/binary, "\n",
         (?S8)/binary, ", p_level", HCBin/binary, " = PLevel", HCBin/binary, "\n",
+        (?S8)/binary, ", p_channel", HCBin/binary, " = PChannel", HCBin/binary, "\n",
         (?S8)/binary, ", p_name", HCBin/binary, " = PName", HCBin/binary, "\n">>,
     gen_log_field(Rest, Bin4, Bin5, Bin6, HC + 1);
 gen_log_field([#db_field{name = Field, type = Type} | Rest], Bin1, Bin2, Bin3, HC)

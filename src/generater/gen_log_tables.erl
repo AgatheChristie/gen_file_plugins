@@ -44,6 +44,7 @@
 -define(COMPILE_OPTS,                   [
     debug_info, report, {outdir, ?COMPILE_PATH},
     {i, "apps/memcache/include/"},
+    {i, "apps/cc_data/src/server/hrl/base/"},
     {i, "apps/game_server/include/"},
     {i, "_build/default/plugins/game/include/"},
     {i, "_build/default/plugins/gen_file/include/"}]).

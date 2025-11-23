@@ -1,17 +1,39 @@
 %%%-------------------------------------------------------------------
-%%% @author Jeson
-%%% @copyright (C) 2023, hk
+%%% @author taiqi
+%%% @copyright (C) 2025, hk
 %%% @doc
 %%%
 %%% @end
-%%% Created : 21. 11月 2023 11:12
+%%% Created : 21. 11月 2025 11:12
 %%%-------------------------------------------------------------------
 -module(gen_log_tables).
--author("Jeson").
 
--include("common.hrl").
+-include("cache_map.hrl").
 
 -export([start/0]).
+
+
+-define(CVGENIF(TrueOrFalse, A, B),
+    case TrueOrFalse of
+        true -> A;
+        false -> B
+    end
+).
+
+
+-define(CVGENDEFAULT(_Data, _Default),     (
+        case _Data of
+            undefined ->
+                _Default;
+            false ->
+                _Default;
+            error ->
+                _Default;
+            _RetData ->
+                _RetData
+        end
+)).
+
 
 -define(SQL_DIR,                        "sql/").
 -define(INCLUDE_DIR,                    "apps/game_server/include/").
@@ -187,11 +209,11 @@ gen_filed_bin([#db_field{type = Type, name = Name, default = Default, comment = 
     gen_filed_bin(Rest, <<Bin/binary, FieldBin/binary, SpaceBin/binary, "%", CommentBin1/binary, "\n">>, HC1).
 
 parse_field_default(Int, Default) when Int == bigint orelse Int == int orelse Int == tinyint ->
-    integer_to_binary(?IF(is_integer(Default), Default, 0));
+    integer_to_binary(?CVGENIF(is_integer(Default), Default, 0));
 parse_field_default(term, Default) ->
     to_binary(Default);
 parse_field_default(Str, Default) when Str == varchar orelse Str == text ->
-    to_binary(?DEFAULT(Default, <<>>));
+    to_binary(?CVGENDEFAULT(Default, <<>>));
 parse_field_default(blob, _) ->
     <<"blob">>;
 parse_field_default(decimal, _) ->
@@ -229,7 +251,7 @@ parse_index_data(#db_index{name = Name, fields = Fields} = Index) ->
     FieldList = ["`" ++ atom_to_list(Field) ++ "`" || Field <- Fields],
     FieldsBin = <<" (", (list_to_binary(string:join(FieldList, ", ")))/binary, ")">>,
     NameBin = parse_field(Name),
-    NewNameBin = ?IF(NameBin == <<>>, <<>>, <<" ", NameBin/binary>>),
+    NewNameBin = ?CVGENIF(NameBin == <<>>, <<>>, <<" ", NameBin/binary>>),
     Index#db_index{name = NewNameBin, fields = FieldsBin}.
 
 gen_field_sql([], Bin, _HC) ->
@@ -256,18 +278,18 @@ get_count_bin(_, Cnt) ->
 -define(DEFAULT_VARCAHR_LEN,                        64).
 %% @doc 解析 #db_field 字段 这里会把 type default 转成对应 binary
 parse_db_field(#db_field{type = term, len = Len} = Field) ->
-    parse_db_field(Field#db_field{type = varchar, len = ?DEFAULT(Len, 255)});
+    parse_db_field(Field#db_field{type = varchar, len = ?CVGENDEFAULT(Len, 255)});
 parse_db_field(#db_field{type = int, default = Default, increment = Inc} = Field)
     when is_integer(Default) orelse Default == undefined ->
-    DefaultBin = ?IF(Inc, undefined, integer_to_binary(?DEFAULT(Default, 0))),
+    DefaultBin = ?CVGENIF(Inc, undefined, integer_to_binary(?CVGENDEFAULT(Default, 0))),
     parse_desc_data(Field#db_field{type = <<"int(10)">>, default = DefaultBin});
 parse_db_field(#db_field{type = tinyint, default = Default, increment = Inc} = Field)
     when is_integer(Default) orelse Default == undefined ->
-    DefaultBin = ?IF(Inc, undefined, integer_to_binary(?DEFAULT(Default, 0))),
+    DefaultBin = ?CVGENIF(Inc, undefined, integer_to_binary(?CVGENDEFAULT(Default, 0))),
     parse_desc_data(Field#db_field{type = <<"tinyint(3)">>, default = DefaultBin});
 parse_db_field(#db_field{type = bigint, default = Default, increment = Inc} = Field)
     when is_integer(Default) orelse Default == undefined ->
-    DefaultBin = ?IF(Inc, undefined, integer_to_binary(?DEFAULT(Default, 0))),
+    DefaultBin = ?CVGENIF(Inc, undefined, integer_to_binary(?CVGENDEFAULT(Default, 0))),
     parse_desc_data(Field#db_field{type = <<"bigint(20)">>, default = DefaultBin});
 parse_db_field(#db_field{type = datetime = Type} = Field) ->
     parse_desc_data(Field#db_field{type = atom_to_binary(Type), default = undefined, unsigned = false, increment = false});
@@ -275,13 +297,13 @@ parse_db_field(#db_field{type = text = Type} = Field) ->
     parse_desc_data(Field#db_field{type = atom_to_binary(Type), unsigned = false, increment = false});
 parse_db_field(#db_field{type = varchar = Type, len = Len, default = Default} = Field)
     when (is_integer(Len) andalso Len > 0) orelse Len == undefined ->
-    Len1 = ?IF(is_integer(Len), Len ,?DEFAULT_VARCAHR_LEN),
+    Len1 = ?CVGENIF(is_integer(Len), Len ,?DEFAULT_VARCAHR_LEN),
     TypeBin = <<(atom_to_binary(Type))/binary, "(", (integer_to_binary(Len1))/binary, ")">>,
-    parse_desc_data(Field#db_field{type = TypeBin, default = ?IF(Default == ?UNDEF, <<>>, to_binary(Default)), unsigned = false, increment = false});
+    parse_desc_data(Field#db_field{type = TypeBin, default = ?CVGENIF(Default == undefined, <<>>, to_binary(Default)), unsigned = false, increment = false});
 parse_db_field(#db_field{type = blob = Type, default = undefined} = Field) ->
     parse_desc_data(Field#db_field{type = atom_to_binary(Type), unsigned = false, increment = false});
 parse_db_field(#db_field{type = decimal = Type, len = {M, D}, default = Default} = Field) when is_float(Default) orelse Default == undefined ->
-    DefaultBin = ?IF(is_float(Default), float_to_binary(Default), <<"0.00">>),
+    DefaultBin = ?CVGENIF(is_float(Default), float_to_binary(Default), <<"0.00">>),
     TypeBin = <<(atom_to_binary(Type))/binary, "(", (integer_to_binary(M))/binary, ",", (integer_to_binary(D))/binary, ")">>,
     parse_desc_data(Field#db_field{type = TypeBin, default = DefaultBin, unsigned = false, increment = false}).
 

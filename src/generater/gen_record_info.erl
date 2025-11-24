@@ -38,7 +38,7 @@ start() ->
 write_user_default(Headers) ->
     Re = <<"%% include start.*%% include end">>,
     UserDefault = "apps/game_server/src/user_default.erl",
-    ReplaceBin = <<"%% include start\n", Headers/binary, "%% include end">>,
+    ReplaceBin = <<"%% include start\n-include(\"protobuf_pb.hrl\").\n", Headers/binary, "%% include end">>,
 
     {ok, Bin} = file:read_file(UserDefault),
     {match, [TarBin]} = re:run(Bin, Re, [dotall, {capture, all, binary}]),

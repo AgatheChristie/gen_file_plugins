@@ -69,12 +69,12 @@ sync_config_files(FromDataDir, ToDataDir, DataIndexMod) ->
     DataFileSets = ordsets:from_list(filelib:wildcard("*.erl", ToDataDir)),
     FromFileSets = ordsets:from_list(filelib:wildcard("*.erl", FromDataDir)),
     DelFileSets = ordsets:subtract(DataFileSets, FromDataDir),
-    DelFileSets = ordsets:from_list(DataIndexMod:list_config()),
+    IndexModSets = ordsets:from_list(DataIndexMod:list_config()),
     [file:delete(filename:join(ToDataDir, DelFile)) || DelFile <- ordsets:to_list(DelFileSets)],
     CopyFiles = lists:filter(
         fun(FileName) ->
             Mod = plugin_util:to_atom(filename:basename(FileName, ".erl")),
-            ordsets:is_element(Mod, DataIndexMod) == false
+            ordsets:is_element(Mod, IndexModSets) == false
         end, ordsets:to_list(FromFileSets)
     ),
     rebar_parallel:queue(

@@ -236,8 +236,25 @@ format_error(Reason) ->
 
 
 
+check_refrence(sys_qqfrhtfhfth = Module, DirList) ->
+    ModList = data_index:split_module(Module),
+    lists:any(fun(ModRef) ->
+        is_module_changed(ModRef, DirList)
+              end, ModList);
 check_refrence(_Mod, _DirList) ->
     false.
+
+
+is_module_changed(ModRef, DirList) ->
+    OutDir = proplists:get_value(out_dir, DirList),
+    ToDir = proplists:get_value(to_data_dir, DirList),
+
+    ErlName = plugin_util:to_list(ModRef) ++ ".erl",
+    BeamName = plugin_util:to_list(ModRef) ++ ".beam",
+
+    ToErl = filename:join([ToDir, ErlName]),
+    ObjFile = filename:join([OutDir, BeamName]),
+    is_source_changed(ToErl, ObjFile).
 
 
 is_source_changed(FromFile, ToFile) ->

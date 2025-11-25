@@ -143,7 +143,7 @@ check_rebuild(DirList, Module, Keys, ErlOpts) ->
     FromErl = filename:join([FromDir, ErlName]),
     HrlFile = filename:join([AppDir, "include", HrlName]),
     ObjFile = filename:join([OutDir, BeamName]),
-
+    rebar_api:info("writeqqqq ~s success", [ObjFile]),
     NeedRebuild =
         case file:read_file_info(ObjFile) of
             {ok, Obj} ->
@@ -152,12 +152,18 @@ check_rebuild(DirList, Module, Keys, ErlOpts) ->
                         {ok, From} = file:read_file_info(FromErl),
                         case From#file_info.mtime > Obj#file_info.mtime of
                             true ->
+                                rebar_api:info("write ~s:~s success", [11111,FromErl]),
+                                %% 源码有变动需要重新编译
                                 true;
                             _ ->
                                 case file:read_file_info(HrlFile) of
                                     {ok, Hrl} when Hrl#file_info.mtime > Obj#file_info.mtime ->
+                                        rebar_api:info("write ~s:~s success", [2222, HrlFile]),
+                                        %% 头文件有变动  需要重新编译
                                         true;
                                     _ ->
+                                        rebar_api:info("write ~s success", [333333]),
+                                        %% 配置索引函数有变化需要重新编译
                                         {export, Heads} = Keys,
                                         ExternFuns = proplists:get_keys(Heads),
                                         Funcs = proplists:get_keys(Module:module_info(exports)),
@@ -166,9 +172,11 @@ check_rebuild(DirList, Module, Keys, ErlOpts) ->
                                 end
                         end;
                     _ ->
+                        %% 没有头文件需要重新编译
                         true
                 end;
             _ ->
+                %% 没有beam文件需要重新编译
                 true
         end,
     case NeedRebuild of

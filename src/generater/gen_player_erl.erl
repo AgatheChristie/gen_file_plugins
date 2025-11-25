@@ -9,11 +9,11 @@
 -module(gen_player_erl).
 -author("Jeson").
 
--export([start/0]).
+-export([start/1, gen_player_erl/0]).
 
 -define(PLAYER_HRL, "apps/game_server/include/player.hrl").
 
-start() -> ok.
+start(_State) -> ok.
   %%  MTime = gen_file:get_modify_time(?PLAYER_HRL),
   %%  CompileTime = gen_file:get_compile_time(),
   %%  (MTime == 0 orelse MTime > CompileTime) andalso gen_player_erl().

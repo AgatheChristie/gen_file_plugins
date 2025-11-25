@@ -31,7 +31,7 @@ do(State) ->
     {ok, Files} = file:list_dir(Dir),
     [begin
          [Mod, "erl"] = string:split(File, "."),
-         {T, _} = timer:tc(erlang, apply, [list_to_atom(Mod), start, []]),
+         {T, _} = timer:tc(erlang, apply, [list_to_atom(Mod), start, [State]]),
          io:format("Mod: ~s UseTime: ~.2fms ~n", [Mod, T / 1000])
      end || File <- Files],
     {ok, State}.

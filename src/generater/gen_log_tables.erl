@@ -11,7 +11,7 @@
 
 -include("common.hrl").
 
--export([start/0]).
+-export([start/1]).
 
 -define(SQL_DIR,                        "sql/").
 -define(INCLUDE_DIR,                    "apps/game_server/include/").
@@ -27,7 +27,7 @@
     {i, "_build/default/plugins/game/include/"},
     {i, "_build/default/plugins/gen_file/include/"}]).
 
-start() ->
+start(_State) ->
    CompileTime = gen_file:get_compile_time(),
    true = code:add_path(?COMPILE_PATH),
    MTime1 = gen_file:get_modify_time(?LOG_TABLES),

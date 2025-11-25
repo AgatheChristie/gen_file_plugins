@@ -9,9 +9,9 @@
 -module(gen_record_info).
 -author("Jeson").
 
--export([start/0, parse_record/1]).
+-export([start/1, parse_record/1]).
 
-start() ->
+start(_State) ->
     Dir = "apps/game_server/include/",
     {ok, Files} = file:list_dir(Dir),
     Fun =

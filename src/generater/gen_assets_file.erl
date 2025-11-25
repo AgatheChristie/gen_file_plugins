@@ -10,9 +10,9 @@
 -author("panhao").
 
 %% API
--export([start/0, gen_assets_sql/0, all_assets_and_name/0, is_assets_data_changed/0]).
+-export([start/1, gen_assets_sql/0, all_assets_and_name/0, is_assets_data_changed/0]).
 
-start() ->
+start(_State) ->
     case is_assets_data_changed() of
         true ->
             {Assets, Names} = all_assets_and_name(),

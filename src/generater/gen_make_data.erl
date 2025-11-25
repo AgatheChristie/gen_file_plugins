@@ -192,7 +192,7 @@ filter_data_export(File) ->
         {Strat, _} ->
             <<Head:Strat/binary-unit:8, Rest/binary>> = FileBin,
             {Start2, _} = binary:match(Rest, <<"\n">>),
-            <<Export:Start2/binary-unit:8, Rest2/binary>> = FileBin,
+            <<Export:Start2/binary-unit:8, Rest2/binary>> = Rest,
             {Head, Export, Rest2};
         nomatch ->
             FileBin

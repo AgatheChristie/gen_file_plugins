@@ -7,8 +7,8 @@
 -include_lib("kernel/include/file.hrl").
 
 
-start(State) ->
-    do(State).
+start(State) -> ok.
+   %% do(State).
 
 do(State) ->
     Apps =

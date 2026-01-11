@@ -7,7 +7,7 @@
 -include_lib("kernel/include/file.hrl").
 
 
-start(State) -> ok.
+start(_State) -> ok.
    %% do(State).
 
 do(State) ->

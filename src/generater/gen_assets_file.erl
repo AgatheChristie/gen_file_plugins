@@ -31,7 +31,7 @@ start(_State) ->
     end.
 
 all_assets_and_name() ->
-    {ok, Bin} = file:read_file("apps/game_server/src/data/assets_data.erl"),
+    {ok, Bin} = file:read_file("apps/cc_data/src/server/data/hapi/assets_data.erl"),
     RE = <<".*all_name\\(\\) -> \\[(.*)\\].">>,
     {match, [_, AssetsStr]} = re:run(Bin, RE,[{capture, all, list}]),
     Assets = [string:trim(S) || S <- string:split(AssetsStr, ",", all)],
